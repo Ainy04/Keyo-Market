@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Servidores - Market Keyo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Panel de usuario simplificado en navbar */
+        .user-panel-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(13, 44, 96, 0.5);
+            border: 2px solid #8EB9E8;
+            border-radius: 10px;
+            padding: 8px 16px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .user-panel-nav:hover {
+            background: rgba(13, 44, 96, 0.7);
+            border-color: #517398;
+        }
+
+        .user-name {
+            color: #8EB9E8;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .user-stat-compact {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+        }  
+
+        body {
+            background: linear-gradient(to bottom, #0a0e27, #1a1f3a);
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .card-glow {
+            background: #517398;
+            backdrop-filter: blur(10px);
+            border: 5px solid #8EB9E8;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-2px);
+            color: #60a5fa;
+        }
+
+        .city-node {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .city-node:hover {
+            filter: brightness(1.5) drop-shadow(0 0 4px currentColor);
+        }
+
+        .city-node.selected {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.15);
+            }
+        }
+
+        .route-line {
+            stroke: rgba(96, 165, 250, 0.3);
+            stroke-width: 2;
+            transition: all 0.3s ease;
+            pointer-events: stroke;
+        }
+
+        .route-line.active {
+            stroke: #60a5fa;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 10px #60a5fa);
+            animation: flowLine 1.5s infinite;
+        }
+        
+        @keyframes flowLine {
+            0%, 100% {
+                stroke-opacity: 1;
+            }
+            50% {
+                stroke-opacity: 0.6;
+            }
+        }
+        
+        .route-line.hover {
+            stroke: rgba(96, 165, 250, 0.7);
+            stroke-width: 2.5;
+        }
+        
+        .route-cost {
+            font-size: 10px;
+            font-weight: bold;
+            fill: #fbbf24;
+            pointer-events: none;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(30, 58, 138, 0.3);
+            border-radius: 4px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #0D2C60;
+            border-radius: 4px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #000018;
+        }
+    </style>
+</head>
+
+<body class="p-6 flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="bg-blue-950/50 rounded-lg p-4 mb-8 border-2 border-blue-900">
+        <div class="flex items-center justify-between">
+            <!-- Links de navegación (izquierda) -->
+            <div class="flex ml-60 gap-8 text-white font-bold">
+                <a href="index.html" class="nav-link p-4 hover:text-blue-300 text-3xl">DASHBOARD</a>
+                <a href="market.html" class="nav-link p-4 text-3xl hover:text-blue-300">MERCADO</a>
+                <a href="servers.html" class="nav-link p-4 text-3xl text-blue-300">MAPA</a>
+                <a href="inventory.html" class="nav-link p-4 text-3xl hover:text-blue-300">INVENTARIO</a>
+            </div>
+            
+            <!-- Panel de usuario compacto (derecha) -->
+            <div class="user-panel-nav">
+                <span class="user-name" id="userName">Jugador1</span>
+                
+                <div class="user-stat-compact">
+                    <span>💰</span>
+                    <span class="text-yellow-400 font-bold" id="userMoney">$50,000</span>
+                </div>
+                
+                <div class="user-stat-compact">
+                    <span>🎒</span>
+                    <span class="text-cyan-400 font-bold">
+                        <span id="userCapacity">0</span>/<span id="userMaxCapacity">50</span>kg
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 overflow-hidden">
+        <!-- Left Column -->
+        <div class="lg:col-span-1 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-[#0A1A42] scrollbar-track-[#0A1A42]">
+            <!-- Ubicación Card -->
+            <div class="card-glow rounded-2xl p-5">
+                <h3 class="text-xl font-bold text-white mb-3">Ubicación</h3>
+
+                <div class="mb-3">
+                    <label class="text-white font-semibold mb-1 block text-sm">Origen</label>
+                    <div class="relative">
+                        <select id="originSelect"
+                            class="w-full bg-blue-950/80 text-white rounded-lg p-2 pr-10 border-2 border-blue-800 focus:border-blue-500 focus:outline-none appearance-none cursor-pointer font-semibold text-sm">
+                            <option value="">Selecciona origen</option>
+                            <option value="Torre Keio">Torre Keio</option>
+                            <option value="Anillos de Datos">Anillos de Datos</option>
+                            <option value="Bosque del Firmware">Bosque del Firmware</option>
+                            <option value="Minas de Silicio">Minas de Silicio</option>
+                            <option value="Montaña">Montaña</option>
+                            <option value="Refinería de Códigos">Refinería de Códigos</option>
+                            <option value="Puerto Cache">Puerto Cache</option>
+                            <option value="Valle Binario">Valle Binario</option>
+                            <option value="Nodo Central">Nodo Central</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="text-white font-semibold mb-1 block text-sm">Destino</label>
+                    <div class="relative">
+                        <select id="destinationSelect"
+                            class="w-full bg-blue-950/80 text-white rounded-lg p-2 pr-10 border-2 border-blue-800 focus:border-blue-500 focus:outline-none appearance-none cursor-pointer font-semibold text-sm">
+                            <option value="">Selecciona destino</option>
+                            <option value="Torre Keio">Torre Keio</option>
+                            <option value="Anillos de Datos">Anillos de Datos</option>
+                            <option value="Bosque del Firmware">Bosque del Firmware</option>
+                            <option value="Minas de Silicio">Minas de Silicio</option>
+                            <option value="Montaña">Montaña</option>
+                            <option value="Refinería de Códigos">Refinería de Códigos</option>
+                            <option value="Puerto Cache">Puerto Cache</option>
+                            <option value="Valle Binario">Valle Binario</option>
+                            <option value="Nodo Central">Nodo Central</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="calculateBtn"
+                    class="w-full bg-gradient-to-r from-[#486FC3] to-[#142F74] hover:bg-gradient-to-bl text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 text-sm">
+                    Calcular Ruta Óptima
+                </button>
+            </div>
+
+            <!-- Detalles Card -->
+            <div id="detailsCard" class="card-glow rounded-2xl p-5">
+                <h3 class="text-xl font-bold text-white mb-3">Detalles de Ruta</h3>
+                <div id="routeDetails" class="text-white space-y-2">
+                    <p class="text-gray-300 text-center text-sm">Selecciona origen y destino para ver detalles</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Map -->
+        <div class="lg:col-span-2 overflow-hidden">
+            <div class="card-glow rounded-2xl p-5 h-full">
+                <h2 class="text-2xl font-bold text-white mb-4">Mapa de Servidores</h2>
+
+                <!-- SVG Map -->
+                <div class="relative w-full h-full bg-blue-950/30 rounded-xl overflow-hidden">
+                    <svg id="mapSvg" viewBox="0 0 900 650" class="w-full h-full">
+                        <!-- Routes (lines) - Red compleja -->
+                        <g id="routes">
+                            <!-- Torre Keio connections -->
+                            <line class="route-line" x1="450" y1="100" x2="300" y2="200" data-route="torre-keio-puerto-cache" />
+                            <text class="route-cost" x="370" y="145">$120</text>
+                            
+                            <line class="route-line" x1="450" y1="100" x2="600" y2="200" data-route="torre-keio-nodo-central" />
+                            <text class="route-cost" x="530" y="145">$100</text>
+
+                            <!-- Puerto Cache connections -->
+                            <line class="route-line" x1="300" y1="200" x2="150" y2="300" data-route="puerto-cache-anillos-datos" />
+                            <text class="route-cost" x="220" y="245">$150</text>
+                            
+                            <line class="route-line" x1="300" y1="200" x2="300" y2="350" data-route="puerto-cache-valle-binario" />
+                            <text class="route-cost" x="310" y="275">$90</text>
+
+                            <!-- Nodo Central connections -->
+                            <line class="route-line" x1="600" y1="200" x2="750" y2="300" data-route="nodo-central-bosque-firmware" />
+                            <text class="route-cost" x="680" y="245">$140</text>
+                            
+                            <line class="route-line" x1="600" y1="200" x2="600" y2="350" data-route="nodo-central-montana" />
+                            <text class="route-cost" x="610" y="275">$110</text>
+
+                            <!-- Anillos de Datos connections -->
+                            <line class="route-line" x1="150" y1="300" x2="300" y2="350" data-route="anillos-datos-valle-binario" />
+                            <text class="route-cost" x="215" y="320">$80</text>
+                            
+                            <line class="route-line" x1="150" y1="300" x2="200" y2="500" data-route="anillos-datos-minas-silicio" />
+                            <text class="route-cost" x="160" y="400">$200</text>
+
+                            <!-- Valle Binario connections -->
+                            <line class="route-line" x1="300" y1="350" x2="450" y2="450" data-route="valle-binario-refineria-codigos" />
+                            <text class="route-cost" x="365" y="395">$130</text>
+                            
+                            <line class="route-line" x1="300" y1="350" x2="200" y2="500" data-route="valle-binario-minas-silicio" />
+                            <text class="route-cost" x="240" y="420">$160</text>
+
+                            <!-- Montaña connections -->
+                            <line class="route-line" x1="600" y1="350" x2="750" y2="300" data-route="montana-bosque-firmware" />
+                            <text class="route-cost" x="670" y="320">$95</text>
+                            
+                            <line class="route-line" x1="600" y1="350" x2="450" y2="450" data-route="montana-refineria-codigos" />
+                            <text class="route-cost" x="520" y="405">$180</text>
+
+                            <!-- Bosque del Firmware connections -->
+                            <line class="route-line" x1="750" y1="300" x2="450" y2="450" data-route="bosque-firmware-refineria-codigos" />
+                            <text class="route-cost" x="595" y="370">$170</text>
+
+                            <!-- Minas de Silicio to Refinería connection -->
+                            <line class="route-line" x1="200" y1="500" x2="450" y2="450" data-route="minas-silicio-refineria-codigos" />
+                            <text class="route-cost" x="315" y="470">$140</text>
+
+                            <!-- Cross connections adicionales para complejidad -->
+                            <line class="route-line" x1="450" y1="100" x2="450" y2="450" data-route="torre-keio-refineria-codigos" />
+                            <text class="route-cost" x="460" y="275">$350</text>
+                            
+                            <line class="route-line" x1="150" y1="300" x2="750" y2="300" data-route="anillos-datos-bosque-firmware" />
+                            <text class="route-cost" x="445" y="290">$400</text>
+                        </g>
+
+                        <!-- Cities (nodes) -->
+                        <g id="cities">
+                            <!-- Torre Keio (Top Center) -->
+                            <g class="city-node" data-city="torre-keio" transform="translate(450, 100)">
+                                <circle r="20" fill="#fbbf24" stroke="#fff" stroke-width="3" />
+                                <text y="-28" text-anchor="middle" fill="#fff" font-weight="bold" font-size="13">Torre Keio</text>
+                                <text y="-14" text-anchor="middle" fill="#fbbf24" font-size="11">(HUB)</text>
+                            </g>
+
+                            <!-- Puerto Cache (Top Left) -->
+                            <g class="city-node" data-city="puerto-cache" transform="translate(300, 200)">
+                                <circle r="16" fill="#06b6d4" stroke="#fff" stroke-width="3" />
+                                <text y="-24" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Puerto</text>
+                                <text y="-11" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Cache</text>
+                            </g>
+
+                            <!-- Nodo Central (Top Right) -->
+                            <g class="city-node" data-city="nodo-central" transform="translate(600, 200)">
+                                <circle r="16" fill="#8b5cf6" stroke="#fff" stroke-width="3" />
+                                <text y="-24" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Nodo</text>
+                                <text y="-11" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Central</text>
+                            </g>
+
+                            <!-- Anillos de Datos (Left) -->
+                            <g class="city-node" data-city="anillos-datos" transform="translate(150, 300)">
+                                <circle r="16" fill="#60a5fa" stroke="#fff" stroke-width="3" />
+                                <text y="-24" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Anillos</text>
+                                <text y="-11" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">de Datos</text>
+                            </g>
+
+                            <!-- Valle Binario (Center Left) -->
+                            <g class="city-node" data-city="valle-binario" transform="translate(300, 350)">
+                                <circle r="16" fill="#10b981" stroke="#fff" stroke-width="3" />
+                                <text y="-24" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Valle</text>
+                                <text y="-11" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Binario</text>
+                            </g>
+
+                            <!-- Montaña (Center Right) -->
+                            <g class="city-node" data-city="montana" transform="translate(600, 350)">
+                                <circle r="16" fill="#fb923c" stroke="#fff" stroke-width="3" />
+                                <text y="-24" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Montaña</text>
+                            </g>
+
+                            <!-- Bosque del Firmware (Right) -->
+                            <g class="city-node" data-city="bosque-firmware" transform="translate(750, 300)">
+                                <circle r="16" fill="#34d399" stroke="#fff" stroke-width="3" />
+                                <text y="-24" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Bosque del</text>
+                                <text y="-11" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Firmware</text>
+                            </g>
+
+                            <!-- Refinería de Códigos (Bottom Center) -->
+                            <g class="city-node" data-city="refineria-codigos" transform="translate(450, 450)">
+                                <circle r="16" fill="#f472b6" stroke="#fff" stroke-width="3" />
+                                <text y="38" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Refinería</text>
+                                <text y="50" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">de Códigos</text>
+                                
+                            </g>
+
+                            <!-- Minas de Silicio (Bottom Left) -->
+                            <g class="city-node" data-city="minas-silicio" transform="translate(200, 500)">
+                                <circle r="16" fill="#a78bfa" stroke="#fff" stroke-width="3" />
+                                <text y="38" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Minas de</text>
+                                <text y="50" text-anchor="middle" fill="#fff" font-weight="bold" font-size="12">Silicio</text>
+                            </g>
+                            
+                        </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const originSelect = document.getElementById('originSelect');
+        const destinationSelect = document.getElementById('destinationSelect');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const routeDetails = document.getElementById('routeDetails');
+        const cityNodes = document.querySelectorAll('.city-node');
+        const routeLines = document.querySelectorAll('.route-line');
+        const API_URL = 'http://localhost:5000/api';
+
+        // Función para actualizar panel de usuario
+        async function actualizarPanelUsuario() {
+            try {
+                const response = await fetch(`${API_URL}/jugador`);
+                const jugador = await response.json();
+                
+                document.getElementById('userName').textContent = jugador.nombre;
+                document.getElementById('userMoney').textContent = `$${Math.round(jugador.dinero).toLocaleString()}`;
+                document.getElementById('userCapacity').textContent = Math.round(jugador.capacidad_usada);
+                document.getElementById('userMaxCapacity').textContent = jugador.capacidad_max;
+            } catch (error) {
+                console.error('Error al actualizar panel de usuario:', error);
+            }
+        }
+
+        // Manejar selección de ciudades en el mapa
+        cityNodes.forEach(node => {
+            node.addEventListener('click', function () {
+                const cityId = this.dataset.city;
+                const cityName = getCityNameFromId(cityId);
+
+                if (!originSelect.value) {
+                    originSelect.value = cityName;
+                    this.classList.add('selected');
+                } else if (!destinationSelect.value && originSelect.value !== cityName) {
+                    destinationSelect.value = cityName;
+                    calculateRoute();
+                }
+            });
+        });
+
+        function getCityNameFromId(id) {
+            const mapping = {
+                'torre-keio': 'Torre Keio',
+                'anillos-datos': 'Anillos de Datos',
+                'bosque-firmware': 'Bosque del Firmware',
+                'minas-silicio': 'Minas de Silicio',
+                'montana': 'Montaña',
+                'refineria-codigos': 'Refinería de Códigos',
+                'puerto-cache': 'Puerto Cache',
+                'valle-binario': 'Valle Binario',
+                'nodo-central': 'Nodo Central'
+            };
+            return mapping[id] || id;
+        }
+
+        // Calcular ruta
+        async function calculateRoute() {
+            const origin = originSelect.value;
+            const destination = destinationSelect.value;
+
+            if (!origin || !destination) {
+                routeDetails.innerHTML = '<p class="text-gray-300 text-center text-sm">Selecciona origen y destino</p>';
+                return;
+            }
+
+            if (origin === destination) {
+                routeDetails.innerHTML = '<p class="text-red-400 text-center text-sm">Origen y destino no pueden ser iguales</p>';
+                return;
+            }
+
+            // Mostrar loading
+            routeDetails.innerHTML = '<p class="text-blue-400 text-center text-sm">⏳ Calculando ruta óptima...</p>';
+
+            try {
+                const response = await fetch(`${API_URL}/calcular_ruta`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        origen: origin,
+                        destino: destination
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.exito) {
+                    // Determinar color del riesgo
+                    let colorRiesgo = 'text-green-400';
+                    if (data.riesgo === 'Medio') colorRiesgo = 'text-yellow-400';
+                    if (data.riesgo === 'Alto') colorRiesgo = 'text-red-400';
+                    
+                    // Determinar color de ganancia (positiva o negativa)
+                    let colorGanancia = data.ganancia_neta >= 0 ? 'text-green-400' : 'text-red-400';
+                    let signoGanancia = data.ganancia_neta >= 0 ? '+' : '';
+
+                    // Construir lista de recursos vendibles
+                    let listaRecursos = '';
+                    if (data.recursos_vendibles && data.recursos_vendibles.length > 0) {
+                        listaRecursos = '<div class="mt-2 space-y-1">';
+                        data.recursos_vendibles.forEach(r => {
+                            listaRecursos += `
+                                <div class="text-xs text-gray-300 flex justify-between">
+                                    <span>${r.recurso} x${r.cantidad}</span>
+                                    <span class="text-green-400">$${r.ganancia_total}</span>
+                                </div>
+                            `;
+                        });
+                        listaRecursos += '</div>';
+                    } else {
+                        listaRecursos = '<p class="text-xs text-gray-400 mt-2">No tienes recursos para vender en este destino</p>';
+                    }
+
+                    // Mostrar resultados completos
+                    routeDetails.innerHTML = `
+                        <div class="space-y-2">
+                            <div class="p-2 bg-blue-900/50 rounded-lg">
+                                <span class="text-gray-300 text-xs">🗺️ Camino:</span>
+                                <p class="font-bold text-white text-sm">${data.camino.join(' → ')}</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="p-2 bg-blue-900/30 rounded-lg">
+                                    <span class="text-gray-300 text-xs">🛣️ Distancia</span>
+                                    <p class="font-bold text-white text-sm">${data.distancia} km</p>
+                                </div>
+                                
+                                <div class="p-2 bg-blue-900/30 rounded-lg">
+                                    <span class="text-gray-300 text-xs">⏱️ Tiempo</span>
+                                    <p class="font-bold text-white text-sm">${data.tiempo} min</p>
+                                </div>
+                                
+                                <div class="p-2 bg-blue-900/30 rounded-lg">
+                                    <span class="text-gray-300 text-xs">💰 Costo viaje</span>
+                                    <p class="font-bold text-red-400 text-sm">-$${data.costo}</p>
+                                </div>
+                                
+                                <div class="p-2 bg-blue-900/30 rounded-lg">
+                                    <span class="text-gray-300 text-xs">💎 Ganancia bruta</span>
+                                    <p class="font-bold text-cyan-400 text-sm">$${data.ganancia_bruta}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="p-2 ${data.ganancia_neta >= 0 ? 'bg-green-900/30 border-2 border-green-600' : 'bg-red-900/30 border-2 border-red-600'} rounded-lg">
+                                <span class="text-gray-300 text-xs">📈 Ganancia neta:</span>
+                                <span class="font-bold ${colorGanancia} text-lg">${signoGanancia}$${Math.abs(data.ganancia_neta)}</span>
+                            </div>
+                            
+                            <div class="p-2 bg-blue-900/30 rounded-lg">
+                                <span class="text-gray-300 text-xs">⚠️ Riesgo:</span>
+                                <span class="font-bold ${colorRiesgo} text-sm">${data.riesgo}</span>
+                            </div>
+                            
+                            <div class="p-2 bg-purple-900/30 rounded-lg border-2 border-purple-600">
+                                <span class="text-purple-300 text-xs font-bold">📦 Recursos vendibles en destino:</span>
+                                ${listaRecursos}
+                            </div>
+
+                        </div>
+                    `;
+                    
+                    // Resaltar ruta en el mapa
+                    resaltarRutaEnMapa(data.camino);
+                } else {
+                    routeDetails.innerHTML = '<p class="text-yellow-400 text-center text-sm">⚠️ No hay ruta disponible</p>';
+                }
+            } catch (error) {
+                console.error('Error al calcular ruta:', error);
+                routeDetails.innerHTML = '<p class="text-red-400 text-center text-sm">❌ Error al calcular ruta</p>';
+            }
+        }
+
+        function resaltarRutaEnMapa(camino) {
+            // Limpiar TODAS las clases de las rutas
+            routeLines.forEach(line => {
+                line.classList.remove('active');
+                line.classList.remove('hover');
+                line.style.stroke = '';
+                line.style.strokeWidth = '';
+            });
+            
+            // Mapeo de nombres a IDs del SVG
+            const nombresSVG = {
+                'Torre Keio': 'torre-keio',
+                'Anillos de Datos': 'anillos-datos',
+                'Bosque del Firmware': 'bosque-firmware',
+                'Minas de Silicio': 'minas-silicio',
+                'Montaña': 'montana',
+                'Refinería de Códigos': 'refineria-codigos',
+                'Puerto Cache': 'puerto-cache',
+                'Valle Binario': 'valle-binario',
+                'Nodo Central': 'nodo-central'
+            };
+            
+            console.log('Camino recibido:', camino);
+            
+            // Resaltar cada segmento del camino
+            for (let i = 0; i < camino.length - 1; i++) {
+                const origenSVG = nombresSVG[camino[i]];
+                const destinoSVG = nombresSVG[camino[i + 1]];
+                
+                console.log(`Buscando ruta: ${origenSVG} -> ${destinoSVG}`);
+                
+                // Buscar la línea correspondiente (bidireccional)
+                routeLines.forEach(line => {
+                    const route = line.dataset.route;
+                    const partes = route.split('-');
+                    
+                    // Verificar si la ruta conecta estos dos nodos (en cualquier dirección)
+                    const coincide = (route.includes(origenSVG) && route.includes(destinoSVG));
+                    
+                    if (coincide) {
+                        console.log(`✓ Ruta encontrada: ${route}`);
+                        line.classList.add('active');
+                    }
+                });
+            }
+        }
+
+        // Hover effects mejorados en las líneas
+        routeLines.forEach(line => {
+            line.addEventListener('mouseenter', function () {
+                if (!this.classList.contains('active')) {
+                    this.classList.add('hover');
+                }
+            });
+            
+            line.addEventListener('mouseleave', function () {
+                this.classList.remove('hover');
+            });
+        });
+
+        // Event listener para el botón de calcular
+        calculateBtn.addEventListener('click', calculateRoute);
+
+        // Cargar panel de usuario al inicio
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarPanelUsuario();
+            
+            // Actualizar cada 10 segundos
+            setInterval(actualizarPanelUsuario, 10000);
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario - Market Keyo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Panel de usuario simplificado en navbar */
+        .user-panel-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(13, 44, 96, 0.5);
+            border: 2px solid #8EB9E8;
+            border-radius: 10px;
+            padding: 8px 16px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .user-panel-nav:hover {
+            background: rgba(13, 44, 96, 0.7);
+            border-color: #517398;
+        }
+
+        .user-name {
+            color: #8EB9E8;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .user-stat-compact {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+        }  
+                
+        body {
+            background: linear-gradient(to bottom, #0a0e27, #1a1f3a);
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .card-glow {
+            background: #517398;
+            backdrop-filter: blur(10px);
+            border: 5px solid #8EB9E8;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            color: #60a5fa;
+        }
+        .inventory-slot {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e293b 100%);
+            border: 3px solid #94a3b8;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .inventory-slot:hover {
+            border-color: #60a5fa;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+        }
+        .inventory-slot.filled {
+            background: linear-gradient(135deg, #1e40af 0%, #312e81 100%);
+            border-color: #60a5fa;
+        }
+        .inventory-slot.selected {
+            border-color: #fbbf24;
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.7);
+        }
+        .item-icon {
+            font-size: 1.5rem;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 8px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(30, 58, 138, 0.3);
+            border-radius: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #0D2C60;
+            border-radius: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #000018;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.3) 100%);
+            border: 2px solid rgba(96, 165, 250, 0.5);
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: #60a5fa;
+        }
+    </style>
+</head>
+<body class="p-6 flex flex-col">
+    <nav class="bg-blue-950/50 rounded-lg p-4 mb-8 border-2 border-blue-900">
+        <div class="flex items-center justify-between">
+            <!-- Links de navegación (izquierda) -->
+            <div class="flex ml-60 gap-8 text-white font-bold">
+                <a href="index.html" class="nav-link p-4 hover:text-blue-300 text-3xl">DASHBOARD</a>
+                <a href="market.html" class="nav-link p-4 text-3xl hover:text-blue-300">MERCADO</a>
+                <a href="servers.html" class="nav-link p-4 text-3xl hover:text-blue-300">MAPA</a>
+                <a href="inventory.html" class="nav-link p-4 text-3xl text-blue-300">INVENTARIO</a>
+            </div>
+            
+            <!-- Panel de usuario compacto (derecha) -->
+            <div class="user-panel-nav">
+                <span class="user-name" id="userName">Jugador1</span>
+                
+                <div class="user-stat-compact">
+                    <span>💰</span>
+                    <span class="text-yellow-400 font-bold" id="userMoney">$50,000</span>
+                </div>
+                
+                <div class="user-stat-compact">
+                    <span>🎒</span>
+                    <span class="text-cyan-400 font-bold">
+                        <span id="userCapacity">0</span>/<span id="userMaxCapacity">50</span>kg
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 overflow-hidden">
+        <!-- Left Column -->
+        <div class="lg:col-span-1 space-y-6 overflow-y-auto">
+            <!-- Mi Riqueza Card -->
+            <div class="card-glow rounded-2xl p-4">
+                <h3 class="text-3xl font-bold text-white mb-3">Mi riqueza</h3>
+
+                <div class="space-y-3">
+                    <div class="stat-card rounded-lg p-2">
+                        <div class="flex items-center gap-4">
+                            <span class="text-2xl">💰</span>
+                            <div class="flex-1">
+                                <p class="text-gray-300 text-lg">Dinero</p>
+                                <p class="text-yellow-400 font-bold text-lg" id="goldAmount">$0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card rounded-lg p-2">
+                        <div class="flex items-center gap-4">
+                            <span class="text-2xl">💎</span>
+                            <div class="flex-1">
+                                <p class="text-gray-300 text-lg">Valor en recursos</p>
+                                <p class="text-cyan-400 font-bold text-base" id="resourceValue">$0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card rounded-lg p-2">
+                        <div class="flex items-center gap-4">
+                            <span class="text-2xl">📊</span>
+                            <div class="flex-1">
+                                <p class="text-gray-300 text-lg">Patrimonio total</p>
+                                <p class="text-green-400 font-bold text-lg" id="totalWealth">$0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btnOptimizar"
+                    class="w-full mt-5 bg-gradient-to-r from-[#486FC3] to-[#142F74] hover:bg-gradient-to-bl text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 text-xl">
+                    Optimizar inventario
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Column - Inventory Grid -->
+        <div class="lg:col-span-2 overflow-hidden">
+            <div class="card-glow rounded-2xl p-4 h-full flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-3xl font-bold text-white">Inventario</h2>
+                    <div class="text-white text-lg">
+                        <span class="text-gray-300">Capacidad:</span>
+                        <span class="font-bold text-cyan-400" id="usedCapacity">0</span>
+                        <span class="text-gray-400">/</span>
+                        <span class="font-bold" id="maxCapacity">50</span>
+                        <span class="text-gray-300 ml-1">kg</span>
+                    </div>
+                </div>
+
+                <!-- Inventory Grid with Scroll -->
+                <div id="inventoryGrid"
+                    class="overflow-y-auto pr-2 mb-3 scrollbar-thin scrollbar-thumb-[#0A1A42] scrollbar-track-[#0A1A42] flex-1">
+                    <div class="grid grid-cols-5 gap-3 h-fit">
+                        <!-- Los slots se generarán dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Item Details Panel -->
+                <div id="itemDetails" class="bg-blue-900/30 rounded-lg p-3 border-2 border-blue-700 hidden">
+                    <div class="flex justify-between items-start gap-3">
+                        <div class="flex-1">
+                            <h4 class="text-white font-bold text-base mb-1" id="itemName">-</h4>
+                            <p class="text-gray-300 text-xs mb-2" id="itemDescription">-</p>
+                            <div class="flex gap-3 text-xs">
+                                <div>
+                                    <span class="text-gray-400">Cantidad:</span>
+                                    <span class="text-white font-bold ml-1" id="itemQuantity">-</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Valor unitario:</span>
+                                    <span class="text-green-400 font-bold ml-1" id="itemValue">-</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Valor total:</span>
+                                    <span class="text-cyan-400 font-bold ml-1" id="itemTotal">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="sellBtn"
+                            class="bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 text-xs">
+                            VENDER
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        let jugadorActual = null;
+        let mercadoActual = null;
+        let slotSeleccionado = null;
+
+        // Iconos para recursos
+        const iconosRecursos = {
+            'CPU Shards': '🔷',
+            'RAM Blocks': '🟪',
+            'Data Packets': '📦',
+            'Quantum Keys': '🔑',
+            'Bug Residue': '🐛',
+            'Neural Chips': '🧠',
+            'Energy Cores': '⚡',
+            'Crypto Keys': '🔐'
+        };
+
+        // Cargar estado del jugador
+        async function cargarJugador() {
+            try {
+                const response = await fetch(`${API_URL}/jugador`);
+                jugadorActual = await response.json();
+                
+                console.log('🎮 Jugador cargado:', jugadorActual);
+                
+                // Actualizar valores existentes
+                document.getElementById('goldAmount').textContent = `$${Math.round(jugadorActual.dinero).toLocaleString()}`;
+                document.getElementById('resourceValue').textContent = `$${Math.round(jugadorActual.valor_recursos).toLocaleString()}`;
+                document.getElementById('totalWealth').textContent = `$${Math.round(jugadorActual.patrimonio_total).toLocaleString()}`;
+                document.getElementById('usedCapacity').textContent = Math.round(jugadorActual.capacidad_usada);
+                document.getElementById('maxCapacity').textContent = jugadorActual.capacidad_max;
+                
+                // 🆕 ACTUALIZAR PANEL DE USUARIO
+                document.getElementById('userName').textContent = jugadorActual.nombre;
+                document.getElementById('userMoney').textContent = `$${Math.round(jugadorActual.dinero).toLocaleString()}`;
+                document.getElementById('userCapacity').textContent = Math.round(jugadorActual.capacidad_usada);
+                document.getElementById('userMaxCapacity').textContent = jugadorActual.capacidad_max;
+                
+                // Cargar mercado para obtener precios
+                await cargarMercado();
+                
+                // Actualizar inventario visual
+                actualizarInventarioVisual();
+                
+            } catch (error) {
+                console.error('Error al cargar jugador:', error);
+            }
+        }
+        async function cargarMercado() {
+            try {
+                const response = await fetch(`${API_URL}/mercado`);
+                const recursos = await response.json();
+                
+                mercadoActual = {};
+                recursos.forEach(r => {
+                    mercadoActual[r.nombre] = r;
+                });
+                
+                console.log('Mercado cargado:', mercadoActual);
+            } catch (error) {
+                console.error('Error al cargar mercado:', error);
+            }
+        }
+
+        function actualizarInventarioVisual() {
+            const grid = document.querySelector('#inventoryGrid .grid');
+            grid.innerHTML = '';
+            
+            const inventario = jugadorActual.inventario;
+            const totalSlots = 20;
+            
+            // Crear slots llenos
+            Object.entries(inventario).forEach(([nombre, cantidad]) => {
+                const icono = iconosRecursos[nombre] || '📦';
+                const slot = crearSlot(nombre, cantidad, icono, true);
+                grid.appendChild(slot);
+            });
+            
+            // Crear slots vacíos
+            const slotsUsados = Object.keys(inventario).length;
+            for (let i = slotsUsados; i < totalSlots; i++) {
+                const slot = crearSlot(null, 0, null, false);
+                grid.appendChild(slot);
+            }
+        }
+
+        function crearSlot(nombre, cantidad, icono, filled) {
+            const div = document.createElement('div');
+            div.className = `inventory-slot rounded-xl flex flex-col items-center justify-center relative h-24 ${filled ? 'filled' : ''}`;
+            
+            if (filled) {
+                div.dataset.recurso = nombre;
+                div.innerHTML = `
+                    <span class="item-icon text-2xl">${icono}</span>
+                    <span class="absolute bottom-1 right-1 bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">${cantidad}</span>
+                `;
+                
+                div.addEventListener('click', () => seleccionarSlot(div, nombre, cantidad));
+            }
+            
+            return div;
+        }
+
+        function seleccionarSlot(slot, nombre, cantidad) {
+            // Limpiar selección anterior
+            document.querySelectorAll('.inventory-slot').forEach(s => s.classList.remove('selected'));
+            
+            // Seleccionar nuevo slot
+            slot.classList.add('selected');
+            slotSeleccionado = { nombre, cantidad };
+            
+            // Obtener datos del recurso
+            const recurso = mercadoActual[nombre];
+            if (!recurso) {
+                console.error('Recurso no encontrado en mercado:', nombre);
+                return;
+            }
+            
+            const valorUnitario = Math.round(recurso.precio * 0.9); // 10% comisión
+            const valorTotal = valorUnitario * cantidad;
+            
+            // Mostrar detalles
+            document.getElementById('itemName').textContent = nombre;
+            document.getElementById('itemDescription').textContent = `Peso: ${recurso.peso}kg | Rareza: ${recurso.rareza}/5 | Ubicación: ${recurso.ubicacion}`;
+            document.getElementById('itemQuantity').textContent = cantidad;
+            document.getElementById('itemValue').textContent = `$${valorUnitario.toLocaleString()}`;
+            document.getElementById('itemTotal').textContent = `$${valorTotal.toLocaleString()}`;
+            document.getElementById('itemDetails').classList.remove('hidden');
+        }
+
+        // Vender recurso
+        async function venderRecurso() {
+            if (!slotSeleccionado) {
+                alert('Selecciona un item para vender');
+                return;
+            }
+            
+            const { nombre, cantidad: maxCantidad } = slotSeleccionado;
+            const recurso = mercadoActual[nombre];
+            const precioVenta = Math.round(recurso.precio * 0.9);
+            
+            const cantidadStr = prompt(
+                `¿Cuántos ${nombre} quieres vender?\n\n` +
+                `Tienes: ${maxCantidad}\n` +
+                `Precio unitario: $${precioVenta} (10% comisión)\n` +
+                `Ganancia total: $${(precioVenta * maxCantidad).toLocaleString()}`,
+                maxCantidad
+            );
+            
+            const cantidadVender = parseInt(cantidadStr);
+            
+            if (!cantidadVender || cantidadVender <= 0) return;
+            
+            if (cantidadVender > maxCantidad) {
+                alert(`Solo tienes ${maxCantidad} disponibles`);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/vender`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        recurso: nombre, 
+                        cantidad: cantidadVender 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.exito) {
+                    alert(`${data.mensaje}\n\nDinero total: $${Math.round(data.dinero).toLocaleString()}`);
+                    
+                    // Ocultar detalles
+                    document.getElementById('itemDetails').classList.add('hidden');
+                    slotSeleccionado = null;
+                    
+                    // Recargar jugador
+                    await cargarJugador();
+                } else {
+                    alert(`${data.mensaje}`);
+                }
+            } catch (error) {
+                console.error('Error al vender:', error);
+                alert('Error en la conexión');
+            }
+        }
+
+        // Optimizar inventario
+        async function optimizarInventario() {
+            try {
+                const response = await fetch(`${API_URL}/optimizar_inventario`);
+                const recomendaciones = await response.json();
+                
+                if (recomendaciones.length === 0) {
+                    alert('No hay recomendaciones disponibles.\n\nPosibles razones:\n- No tienes dinero suficiente\n- No tienes capacidad disponible\n- No hay recursos disponibles');
+                    return;
+                }
+                
+                let mensaje = 'RECURSOS RECOMENDADOS\n\n';
+                let costoTotal = 0;
+                let pesoTotal = 0;
+                
+                recomendaciones.forEach(rec => {
+                    mensaje += `• ${rec.nombre} x${rec.cantidad}\n`;
+                    mensaje += `  Precio: $${rec.costo_total.toLocaleString()} | Peso: ${rec.peso_total}kg\n\n`;
+                    costoTotal += rec.costo_total;
+                    pesoTotal += rec.peso_total;
+                });
+                
+                mensaje += `─────────────────────\n`;
+                mensaje += `Costo total: $${Math.round(costoTotal).toLocaleString()}\n`;
+                mensaje += `Peso total: ${pesoTotal}kg\n`;
+                mensaje += `Dinero disponible: $${Math.round(jugadorActual.dinero).toLocaleString()}\n`;
+                mensaje += `Capacidad disponible: ${Math.round(jugadorActual.capacidad_max - jugadorActual.capacidad_usada)}kg`;
+                
+                alert(mensaje);
+                
+            } catch (error) {
+                console.error('Error al optimizar:', error);
+                alert('Error al optimizar inventario');
+            }
+        }
+
+        // Eventos
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarJugador();
+            
+            const btnOptimizar = document.getElementById('btnOptimizar');
+            btnOptimizar.addEventListener('click', optimizarInventario);
+            
+            const btnVender = document.getElementById('sellBtn');
+            btnVender.addEventListener('click', venderRecurso);
+            
+            // Auto-actualizar cada 30 segundos
+            setInterval(() => {
+                cargarJugador();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

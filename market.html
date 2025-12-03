@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Keyo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Panel de usuario simplificado en navbar */
+        .user-panel-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(13, 44, 96, 0.5);
+            border: 2px solid #8EB9E8;
+            border-radius: 10px;
+            padding: 8px 16px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .user-panel-nav:hover {
+            background: rgba(13, 44, 96, 0.7);
+            border-color: #517398;
+        }
+
+        .user-name {
+            color: #8EB9E8;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .user-stat-compact {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+        }  
+
+        body {
+            background: linear-gradient(to bottom, #0a0e27, #1a1f3a);
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .card-glow {
+            background: #517398;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-2px);
+            color: #60a5fa;
+        }
+
+        .item-card {
+            background: linear-gradient(135deg, rgba(100, 150, 220, 0.4) 0%, rgba(70, 120, 190, 0.4) 100%);
+            border: 4px solid #0A1A42;
+            transition: all 0.3s ease;
+        }
+
+        .item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(74, 144, 226, 0.4);
+        }
+
+        .stock-bar {
+            background: linear-gradient(to right, #3b82f6, #60a5fa);
+        }
+
+        /* Scrollbar personalizado */
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(30, 58, 138, 0.3);
+            border-radius: 4px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #0D2C60;
+            border-radius: 4px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #000018;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-6 flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="bg-blue-950/50 rounded-lg p-4 mb-8 border-2 border-blue-900">
+        <div class="flex items-center justify-between">
+            <!-- Links de navegación (izquierda) -->
+            <div class="flex ml-60 gap-8 text-white font-bold">
+                <a href="index.html" class="nav-link p-4 hover:text-blue-300 text-3xl">DASHBOARD</a>
+                <a href="market.html" class="nav-link p-4 text-3xl text-blue-300">MERCADO</a>
+                <a href="servers.html" class="nav-link p-4 text-3xl hover:text-blue-300">MAPA</a>
+                <a href="inventory.html" class="nav-link p-4 text-3xl hover:text-blue-300">INVENTARIO</a>
+            </div>
+            
+            <!-- Panel de usuario compacto (derecha) -->
+            <div class="user-panel-nav">
+                <span class="user-name" id="userName">Jugador1</span>
+                
+                <div class="user-stat-compact">
+                    <span>💰</span>
+                    <span class="text-yellow-400 font-bold" id="userMoney">$50,000</span>
+                </div>
+                
+                <div class="user-stat-compact">
+                    <span>🎒</span>
+                    <span class="text-cyan-400 font-bold">
+                        <span id="userCapacity">0</span>/<span id="userMaxCapacity">50</span>kg
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 overflow-hidden">
+        <!-- Left Column -->
+        <div class="lg:col-span-1 space-y-6 overflow-hidden">
+            <!-- Ubicación Card -->
+            <div class="card-glow rounded-2xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4">Ubicación</h3>
+                <div class="relative">
+                    <select id="locationSelect"
+                        class="w-full bg-blue-900/80 text-white rounded-lg p-3 pr-10 border-2 border-blue-800 focus:border-blue-500 focus:outline-none appearance-none cursor-pointer font-semibold">
+                        <option value="">Todas las ubicaciones</option>
+                        <option value="Torre Keio">Torre Keio</option>
+                        <option value="Anillos de Datos">Anillos de Datos</option>
+                        <option value="Bosque del Firmware">Bosque del Firmware</option>
+                        <option value="Minas de Silicio">Minas de Silicio</option>
+                        <option value="Montaña">Montaña</option>
+                        <option value="Refinería de Códigos">Refinería de Códigos</option>
+                        <option value="Puerto Cache">Puerto Cache</option>
+                        <option value="Valle Binario">Valle Binario</option>
+                        <option value="Nodo Central">Nodo Central</option>
+                    </select>
+                    <!-- Flecha custom -->
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tendencia Card -->
+            <div class="card-glow rounded-2xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4">Tendencia</h3>
+                <div class="w-full h-48">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Items -->
+        <div class="lg:col-span-2 overflow-hidden">
+            <div class="card-glow rounded-2xl p-6 h-full flex flex-col">
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-6 flex-shrink-0">
+                    <h2 class="text-2xl font-bold text-white">ITEMS</h2>
+                    <div class="flex gap-2">
+                        <button id="btnOferta"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all">
+                            OFERTA
+                        </button>
+                        <button id="btnDemanda"
+                            class="px-4 py-2 bg-blue-800/50 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all">
+                            DEMANDA
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Items Grid -->
+                <div
+                    class="space-y-4 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#0A1A42] scrollbar-track-[#0A1A42] flex-1">
+                    <!-- CPU Shards -->
+                    <div class="item-card rounded-xl p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4 flex-1">
+                                <div
+                                    class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">🔷</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-white font-bold text-lg">CPU SHARDS</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-blue-200 text-sm">Stock: 87</span>
+                                        <div
+                                            class="flex-1 bg-blue-950/50 h-2 rounded-full overflow-hidden max-w-[150px]">
+                                            <div class="stock-bar h-full" style="width: 87%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="text-right">
+                                    <p class="text-green-400 font-bold text-xl">$2,450</p>
+                                    <p class="text-green-400 text-sm">+12%</p>
+                                </div>
+                                <button
+                                    class="px-6 py-2 bg-[#0D2C60] hover:bg-[#000018] text-white rounded-lg font-bold transition-all">
+                                    COMPRAR
+                                </button>
+                                <button
+                                    class="px-6 py-2 bg-[#8EB9E8] hover:bg-[#517398] text-white rounded-lg font-bold transition-all">
+                                    VENDER
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RAM Blocks -->
+                    <div class="item-card rounded-xl p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4 flex-1">
+                                <div
+                                    class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">🟪</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-white font-bold text-lg">RAM BLOCKS</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-blue-200 text-sm">Stock: 63</span>
+                                        <div
+                                            class="flex-1 bg-blue-950/50 h-2 rounded-full overflow-hidden max-w-[150px]">
+                                            <div class="stock-bar h-full" style="width: 63%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="text-right">
+                                    <p class="text-red-400 font-bold text-xl">$1,890</p>
+                                    <p class="text-red-400 text-sm">-8%</p>
+                                </div>
+                                <button
+                                    class="px-6 py-2 bg-[#0D2C60] hover:bg-[#000018] text-white rounded-lg font-bold transition-all">
+                                    COMPRAR
+                                </button>
+                                <button
+                                    class="px-6 py-2 bg-[#8EB9E8] hover:bg-[#517398] text-white rounded-lg font-bold transition-all">
+                                    VENDER
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Packets -->
+                    <div class="item-card rounded-xl p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4 flex-1">
+                                <div
+                                    class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">📦</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-white font-bold text-lg">DATA PACKETS</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-blue-200 text-sm">Stock: 94</span>
+                                        <div
+                                            class="flex-1 bg-blue-950/50 h-2 rounded-full overflow-hidden max-w-[150px]">
+                                            <div class="stock-bar h-full" style="width: 94%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="text-right">
+                                    <p class="text-green-400 font-bold text-xl">$3,200</p>
+                                    <p class="text-green-400 text-sm">+5%</p>
+                                </div>
+                                <button
+                                    class="px-6 py-2 bg-[#0D2C60] hover:bg-[#000018] text-white rounded-lg font-bold transition-all">
+                                    COMPRAR
+                                </button>
+                                <button
+                                    class="px-6 py-2 bg-[#8EB9E8] hover:hover:bg-[#517398] text-white rounded-lg font-bold transition-all">
+                                    VENDER
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quantum Keys -->
+                    <div class="item-card rounded-xl p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4 flex-1">
+                                <div
+                                    class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">🔑</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-white font-bold text-lg">QUANTUM KEYS</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-blue-200 text-sm">Stock: 23</span>
+                                        <div
+                                            class="flex-1 bg-blue-950/50 h-2 rounded-full overflow-hidden max-w-[150px]">
+                                            <div class="stock-bar h-full" style="width: 23%"></div>
+                                        </div>
+                                        <span class="text-yellow-400 text-xs font-bold">RARO</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="text-right">
+                                    <p class="text-green-400 font-bold text-xl">$8,750</p>
+                                    <p class="text-green-400 text-sm">+18%</p>
+                                </div>
+                                <button
+                                    class="px-6 py-2 bg-[#0D2C60] hover:bg-[#000018] text-white rounded-lg font-bold transition-all">
+                                    COMPRAR
+                                </button>
+                                <button
+                                    class="px-6 py-2 bg-[#8EB9E8] hover:hover:bg-[#517398] text-white rounded-lg font-bold transition-all">
+                                    VENDER
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bug Residue -->
+                    <div class="item-card rounded-xl p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4 flex-1">
+                                <div
+                                    class="w-12 h-12 bg-gradient-to-br from-red-400 to-pink-600 rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">🐛</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-white font-bold text-lg">BUG RESIDUE</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-blue-200 text-sm">Stock: 156</span>
+                                        <div
+                                            class="flex-1 bg-blue-950/50 h-2 rounded-full overflow-hidden max-w-[150px]">
+                                            <div class="stock-bar h-full" style="width: 100%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="text-right">
+                                    <p class="text-red-400 font-bold text-xl">$450</p>
+                                    <p class="text-red-400 text-sm">-3%</p>
+                                </div>
+                                <button
+                                    class="px-6 py-2 bg-[#0D2C60] hover:bg-[#000018] text-white rounded-lg font-bold transition-all">
+                                    COMPRAR
+                                </button>
+                                <button
+                                    class="px-6 py-2 bg-[#8EB9E8] hover:hover:bg-[#517398] text-white rounded-lg font-bold transition-all">
+                                    VENDER
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let trendChartMarket = null;
+
+        // Función para actualizar panel de usuario
+        async function actualizarPanelUsuario() {
+            try {
+                const response = await fetch(`${API_URL}/jugador`);
+                const jugador = await response.json();
+                
+                document.getElementById('userName').textContent = jugador.nombre;
+                document.getElementById('userMoney').textContent = `$${Math.round(jugador.dinero).toLocaleString()}`;
+                document.getElementById('userCapacity').textContent = Math.round(jugador.capacidad_usada);
+                document.getElementById('userMaxCapacity').textContent = jugador.capacidad_max;
+            } catch (error) {
+                console.error('Error al actualizar panel de usuario:', error);
+            }
+        }
+
+        // Cargar datos reales para la gráfica del mercado
+        async function cargarGraficaMercado() {
+            try {
+                const response = await fetch(`${API_URL}/mercado`);
+                const recursos = await response.json();
+                
+                // Mostrar demanda vs oferta de los 5 recursos principales
+                recursos.sort((a, b) => b.precio - a.precio);
+                const top5 = recursos.slice(0, 5);
+                
+                const labels = top5.map(r => r.nombre.split(' ')[0]);
+                const demanda = top5.map(r => r.demanda);
+                const oferta = top5.map(r => r.oferta);
+                
+                const ctx = document.getElementById('trendChart').getContext('2d');
+                
+                if (trendChartMarket) {
+                    trendChartMarket.destroy();
+                }
+                
+                trendChartMarket = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Demanda',
+                                data: demanda,
+                                backgroundColor: '#8EB9E8',
+                                borderColor: '#517398',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Oferta',
+                                data: oferta,
+                                backgroundColor: '#517398',
+                                borderColor: '#0D2C60',
+                                borderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        aspectRatio: 2,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: '#8EB9E8',
+                                    font: {
+                                        size: 11,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#0A1A42',
+                                titleColor: '#8EB9E8',
+                                bodyColor: '#ffffff',
+                                borderColor: '#517398',
+                                borderWidth: 2
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                grid: {
+                                    color: 'rgba(142, 185, 232, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#8EB9E8'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(142, 185, 232, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#8EB9E8'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error al cargar gráfica del mercado:', error);
+            }
+        }
+
+        // Cargar gráfica al inicio junto con el mercado
+        async function cargarMercado(ubicacionFiltro = '') {
+            try {
+                let url = `${API_URL}/mercado`;
+                if (ubicacionFiltro) {
+                    url += `?ubicacion=${encodeURIComponent(ubicacionFiltro)}`;
+                }
+                
+                const response = await fetch(url);
+                const recursos = await response.json();
+                
+                console.log('Mercado cargado:', recursos);
+                
+                // Limpiar items actuales
+                const itemsContainer = document.querySelector('.space-y-4');
+                if (recursos.length === 0) {
+                    itemsContainer.innerHTML = '<p class="text-white text-center">No hay recursos en esta ubicación</p>';
+                    return;
+                }
+                
+                actualizarItemsEnHTML(recursos);
+                
+                // ACTUALIZAR GRÁFICA junto con el mercado
+                await cargarGraficaMercado();
+                
+            } catch (error) {
+                console.error('Error al cargar mercado:', error);
+            }
+        }
+
+        function actualizarItemsEnHTML(recursos) {
+            const itemsContainer = document.querySelector('.space-y-4');
+            itemsContainer.innerHTML = ''; // Limpiar todo
+            
+            if (recursos.length === 0) {
+                itemsContainer.innerHTML = '<p class="text-white text-center py-8">🔭 No hay recursos disponibles en esta ubicación</p>';
+                return;
+            }
+            
+            const iconos = {
+                'CPU Shards': '🔷',
+                'RAM Blocks': '🟪',
+                'Data Packets': '📦',
+                'Quantum Keys': '🔑',
+                'Bug Residue': '🐛',
+                'Neural Chips': '🧠',
+                'Energy Cores': '⚡',
+                'Crypto Keys': '🔐'
+            };
+            
+            // COLORES ESPECÍFICOS POR RECURSO
+            const coloresGradiente = {
+                'CPU Shards': 'from-cyan-400 to-blue-600',
+                'RAM Blocks': 'from-purple-400 to-purple-600',
+                'Data Packets': 'from-green-400 to-emerald-600',
+                'Quantum Keys': 'from-yellow-400 to-orange-600',
+                'Bug Residue': 'from-red-400 to-pink-600',
+                'Neural Chips': 'from-pink-400 to-rose-600',
+                'Energy Cores': 'from-yellow-300 to-amber-500',
+                'Crypto Keys': 'from-indigo-400 to-purple-600'
+            };
+            
+            recursos.forEach(recurso => {
+                const icono = iconos[recurso.nombre] || '📦';
+                const colorGradiente = coloresGradiente[recurso.nombre] || 'from-cyan-400 to-blue-600';
+                const colorCambio = recurso.cambio_porcentaje >= 0 ? 'text-green-400' : 'text-red-400';
+                const signoCambio = recurso.cambio_porcentaje >= 0 ? '+' : '';
+                const porcentajeStock = Math.min((recurso.stock / 200) * 100, 100);
+                
+                const itemHTML = `
+                    <div class="item-card rounded-xl p-4" data-recurso="${recurso.nombre}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4 flex-1">
+                                <div class="w-12 h-12 bg-gradient-to-br ${colorGradiente} rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">${icono}</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-white font-bold text-lg">${recurso.nombre.toUpperCase()}</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-blue-200 text-sm">Stock: ${recurso.stock}</span>
+                                        <div class="flex-1 bg-blue-950/50 h-2 rounded-full overflow-hidden max-w-[150px]">
+                                            <div class="stock-bar h-full" style="width: ${porcentajeStock}%"></div>
+                                        </div>
+                                        ${recurso.rareza >= 4 ? '<span class="text-yellow-400 text-xs font-bold">RARO</span>' : ''}
+                                    </div>
+                                    <div class="text-xs text-gray-400 mt-1">
+                                        ${recurso.ubicacion} | D: ${recurso.demanda} | O: ${recurso.oferta}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="text-right">
+                                    <p class="${colorCambio} font-bold text-xl">$${Math.round(recurso.precio).toLocaleString()}</p>
+                                    <p class="${colorCambio} text-sm">${signoCambio}${recurso.cambio_porcentaje}%</p>
+                                </div>
+                                <button class="btn-comprar px-6 py-2 bg-[#0D2C60] hover:bg-[#000018] text-white rounded-lg font-bold transition-all">
+                                    COMPRAR
+                                </button>
+                                <button class="btn-vender px-6 py-2 bg-[#8EB9E8] hover:bg-[#517398] text-white rounded-lg font-bold transition-all">
+                                    VENDER
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                itemsContainer.innerHTML += itemHTML;
+            });
+            
+            // Reagregar eventos a los botones
+            agregarEventosBotones();
+        }
+
+        function agregarEventosBotones() {
+            document.querySelectorAll('.item-card').forEach(card => {
+                const nombreRecurso = card.dataset.recurso;
+                
+                const btnComprar = card.querySelector('.btn-comprar');
+                const btnVender = card.querySelector('.btn-vender');
+                
+                if (btnComprar) {
+                    btnComprar.onclick = () => {
+                        const cantidad = parseInt(prompt(`¿Cuántos ${nombreRecurso} quieres comprar?`, '1'));
+                        if (cantidad && cantidad > 0) {
+                            comprarRecurso(nombreRecurso, cantidad);
+                        }
+                    };
+                }
+                
+                if (btnVender) {
+                    btnVender.onclick = () => {
+                        const cantidad = parseInt(prompt(`¿Cuántos ${nombreRecurso} quieres vender?`, '1'));
+                        if (cantidad && cantidad > 0) {
+                            venderRecurso(nombreRecurso, cantidad);
+                        }
+                    };
+                }
+            });
+        }
+
+        function actualizarPreciosEnHTML(recursos) {
+            // Ahora los nombres coinciden directamente
+            recursos.forEach(recurso => {
+                // Buscar el card del item por nombre exacto
+                const cards = document.querySelectorAll('.item-card');
+                cards.forEach(card => {
+                    const titulo = card.querySelector('h4');
+                    if (titulo && titulo.textContent.trim() === recurso.nombre.toUpperCase()) {
+                        // Actualizar precio
+                        const precioElement = card.querySelector('.text-green-400, .text-red-400');
+                        if (precioElement) {
+                            precioElement.textContent = `$${Math.round(recurso.precio).toLocaleString()}`;
+                            
+                            // Actualizar color según cambio
+                            if (recurso.cambio_porcentaje > 0) {
+                                precioElement.className = 'font-bold text-xl text-green-400';
+                                const cambioElement = precioElement.parentElement.querySelector('.text-sm');
+                                if (cambioElement) {
+                                    cambioElement.textContent = `+${recurso.cambio_porcentaje}%`;
+                                    cambioElement.className = 'text-sm text-green-400';
+                                }
+                            } else {
+                                precioElement.className = 'font-bold text-xl text-red-400';
+                                const cambioElement = precioElement.parentElement.querySelector('.text-sm');
+                                if (cambioElement) {
+                                    cambioElement.textContent = `${recurso.cambio_porcentaje}%`;
+                                    cambioElement.className = 'text-sm text-red-400';
+                                }
+                            }
+                        }
+                        
+                        // Actualizar stock
+                        const stockElement = card.querySelector('.text-blue-200');
+                        if (stockElement) {
+                            stockElement.textContent = `Stock: ${recurso.stock}`;
+                        }
+                        
+                        // Actualizar barra de stock (máximo 200 para la escala)
+                        const barra = card.querySelector('.stock-bar');
+                        if (barra) {
+                            const porcentaje = Math.min((recurso.stock / 200) * 100, 100);
+                            barra.style.width = `${porcentaje}%`;
+                        }
+                    }
+                });
+            });
+            
+            // ACTUALIZAR GRÁFICA cuando cambien los precios
+            cargarGraficaMercado();
+        }
+
+        // Función para comprar
+        async function comprarRecurso(nombreHTML, cantidad) {
+            try {
+                const response = await fetch(`${API_URL}/comprar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recurso: nombreHTML,
+                        cantidad: cantidad
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.exito) {
+                    alert(`${data.mensaje}\n\nDinero restante: $${Math.round(data.dinero).toLocaleString()}\nCapacidad usada: ${Math.round(data.capacidad_usada)}/${data.capacidad_max} kg`);
+                    await actualizarPanelUsuario();
+                    cargarMercado();
+                } else {
+                    alert(`${data.mensaje}\n\nPosibles razones:\n- Dinero insuficiente\n- Capacidad de inventario llena`);
+                }
+            } catch (error) {
+                console.error('Error al comprar:', error);
+                alert('Error en la conexión con el servidor');
+            }
+        }
+
+        // Función para vender
+        async function venderRecurso(nombreHTML, cantidad) {
+            try {
+                const response = await fetch(`${API_URL}/vender`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recurso: nombreHTML,
+                        cantidad: cantidad
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.exito) {
+                    alert(`${data.mensaje}\n\n💰 Dinero total: $${Math.round(data.dinero).toLocaleString()}`);
+                    await actualizarPanelUsuario();
+                    cargarMercado();
+                } else {
+                    alert(`No tienes suficiente ${nombreHTML} en tu inventario`);
+                }
+            } catch (error) {
+                console.error('Error al vender:', error);
+                alert('Error en la conexión con el servidor');
+            }
+        }
+
+        // Agregar evento a botones de comprar
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarPanelUsuario();
+            cargarMercado();
+            
+            // Filtro por ubicación
+            const locationSelect = document.getElementById('locationSelect');
+            if (locationSelect) {
+                locationSelect.addEventListener('change', function() {
+                    const ubicacion = this.value;
+                    console.log('Filtrando por ubicación:', ubicacion);
+                    cargarMercado(ubicacion);
+                });
+            }
+            
+            // Botones de ordenamiento
+            const btnOferta = document.getElementById('btnOferta');
+            const btnDemanda = document.getElementById('btnDemanda');
+
+            if (btnOferta) {
+                btnOferta.addEventListener('click', () => {
+                    console.log('Ordenando por OFERTA (mayor a menor)');
+                    
+                    // Cambiar estilos visuales
+                    btnOferta.className = 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all';
+                    btnDemanda.className = 'px-4 py-2 bg-blue-800/50 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all';
+                    
+                    cargarMercadoOrdenado('oferta');
+                });
+            }
+            
+            if (btnDemanda) {
+                btnDemanda.addEventListener('click', () => {
+                    console.log('Ordenando por DEMANDA (mayor a menor)');
+                    
+                    // Cambiar estilos visuales
+                    btnDemanda.className = 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all';
+                    btnOferta.className = 'px-4 py-2 bg-blue-800/50 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all';
+                    
+                    cargarMercadoOrdenado('demanda');
+                });
+            }
+            
+            // Auto-actualizar cada 30 segundos (incluye gráfica)
+            setInterval(async () => {
+                await fetch(`${API_URL}/simular_turno`, { method: 'POST' });
+                const ubicacion = locationSelect ? locationSelect.value : '';
+                await actualizarPanelUsuario();
+                cargarMercado(ubicacion);
+            }, 30000);
+        });
+
+        async function cargarMercadoOrdenado(criterio) {
+            try {
+                const locationSelect = document.getElementById('locationSelect');
+                let url = `${API_URL}/mercado?orden=${criterio}`;
+                if (locationSelect && locationSelect.value) {
+                    url += `&ubicacion=${encodeURIComponent(locationSelect.value)}`;
+                }
+                
+                console.log('Cargando mercado ordenado:', url);
+                const response = await fetch(url);
+                const recursos = await response.json();
+                actualizarItemsEnHTML(recursos);
+                
+                // ACTUALIZAR GRÁFICA al ordenar
+                await cargarGraficaMercado();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+
+</html>

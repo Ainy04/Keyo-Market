@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Keyo Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+    /* Panel de usuario simplificado en navbar */
+    .user-panel-nav {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        border: 2px solid #8EB9E8;
+        border-radius: 10px;
+        padding: 8px 16px;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+    .user-panel-nav:hover {
+        background: rgba(13, 44, 96, 0.7);
+        border-color: #517398;
+    }
+
+    .user-name {
+        color: #8EB9E8;
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .user-stat-compact {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 13px;
+    }
+
+        body {
+            background: linear-gradient(to bottom, #0a0e27, #1a1f3a);
+            font-family: 'Arial', sans-serif;
+        }
+        .card-glow {
+            background: #517398;
+            backdrop-filter: blur(10px);
+            border: 5px solid #8EB9E8;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            color: #60a5fa;
+        }
+
+    </style>
+</head>
+<body class="min-h-screen p-6">
+
+    <!-- Navigation -->
+    <nav class="bg-blue-950/50 rounded-lg p-4 mb-8 border-2 border-blue-900">
+        <div class="flex items-center justify-between">
+            <!-- Links de navegación (izquierda) -->
+            <div class="flex ml-60 gap-8 text-white font-bold">
+                <a href="index.html" class="nav-link p-4 text-blue-300 text-3xl">DASHBOARD</a>
+                <a href="market.html" class="nav-link p-4 text-3xl hover:text-blue-300">MERCADO</a>
+                <a href="servers.html" class="nav-link p-4 text-3xl hover:text-blue-300">MAPA</a>
+                <a href="inventory.html" class="nav-link p-4 text-3xl hover:text-blue-300">INVENTARIO</a>
+            </div>
+            
+            <!-- Panel de usuario compacto (derecha) -->
+            <div class="user-panel-nav">
+                <span class="user-name" id="userName">Jugador1</span>
+                
+                <div class="user-stat-compact">
+                    <span>💰</span>
+                    <span class="text-yellow-400 font-bold" id="userMoney">$50,000</span>
+                </div>
+                
+                <div class="user-stat-compact">
+                    <span>🎒</span>
+                    <span class="text-cyan-400 font-bold">
+                        <span id="userCapacity">0</span>/<span id="userMaxCapacity">50</span>kg
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Welcome Card -->
+            <div class="card-glow rounded-2xl p-8 transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_30px_rgba(74,144,226,0.5)] cursor-pointer">
+                <h2 class="text-3xl font-bold text-white mb-2">
+                    BIENVENIDO AL <br><span class="text-[#0A1A42]">MARKET KEYO</span>
+                </h2>
+                <p class="text-blue-100 text-lg mb-3">
+                    Bienvenido al sistema de comercio global. Los precios se actualizan en tiempo real basados en la oferta y demanda.
+                </p>
+                <button class="bg-gradient-to-r from-[#486FC3] to-[#142F74] hover:bg-gradient-to-bl text-white font-bold py-2 px-6 rounded-lg transition-all duration-300 hover:scale-105 cursor-pointer">
+                    IR AL MERCADO →
+                </button>
+            </div>
+
+            <!-- Servidores Card -->
+            <div class="card-glow rounded-2xl h-48 transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_30px_rgba(74,144,226,0.5)] cursor-pointer"
+                onclick="window.location.href='/servers.html'">
+                <h3 class="text-xl font-bold text-white px-4 mt-4">SERVIDORES</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2">
+                    <p class="text-blue-100 text-base mt-4 mb-2 px-4">
+                        Consulta y gestiona los servidores disponibles en el mapa para optimizar tus rutas de comercio.
+                    </p>
+                    <img src="/img/mapa.png" 
+                        alt="Keyo" 
+                        class="ml-10 w-32 h-32 rounded-lg">
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Column -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Tendencia Card -->
+            <div class="card-glow h-72 rounded-2xl p-6 ">
+                <h3 class="text-xl font-bold text-white mb-4">TENDENCIA</h3>
+                <div class="w-full h-48">
+                    <canvas id="trendG"></canvas>
+                </div>
+            </div>
+
+            <!-- Inventario Card -->
+            <div class="card-glow h-48 rounded-2xl transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_30px_rgba(74,144,226,0.5)] cursor-pointer"
+                onclick="window.location.href='/inventory.html'">
+                <h3 class="text-xl font-bold text-white px-4 mt-4 ">INVENTARIO</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2">
+                    <p class="text-blue-100 text-base mt-4 mb-6 px-4">
+                        Administra tu inventario de manera eficiente para maximizar tus ganancias y optimizar el espacio.
+                    </p>
+                    <img src="/img/mochila.png" 
+                        alt="Keyo" 
+                        class="ml-10 w-32 h-32 rounded-lg">
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="lg:col-span-1">
+            <!-- Keyo Screen -->
+            <div class="rounded-3xl ml-24 mb-6 h-60 relative overflow-hidden transition-all duration-300 hover:scale-110">
+                <img src="/img/KeyoSplashSS.gif" 
+                    alt="Keyo" 
+                    class="w-72 h-72 rounded-lg">
+            </div>
+
+            <!-- Misiones Card -->
+            <div class="h-58 mt-10 rounded-2xl ml-60 mt-32 p-4 transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_30px_rgba(74,144,226,0.5)] cursor-pointer">
+                <h3 class="text-xl font-bold text-white/10 mb-4">Desarrolado por:</h3>
+                <img src="/img/MarcasAgua.png" 
+                    alt="Keyo" 
+                    class="w-30 h-18 rounded-lg">
+            </div>
+        </div>
+    </div>
+
+<script>
+    const API_URL = 'http://localhost:5000/api';
+        
+    // Función para actualizar panel de usuario
+    async function actualizarPanelUsuario() {
+        try {
+            const response = await fetch(`${API_URL}/jugador`);
+            const jugador = await response.json();
+            
+            document.getElementById('userName').textContent = jugador.nombre;
+            document.getElementById('userMoney').textContent = `$${Math.round(jugador.dinero).toLocaleString()}`;
+            document.getElementById('userCapacity').textContent = Math.round(jugador.capacidad_usada);
+            document.getElementById('userMaxCapacity').textContent = jugador.capacidad_max;
+        } catch (error) {
+            console.error('Error al cargar datos del usuario:', error);
+        }
+    }
+    
+        let trendChart = null;
+
+        // Cargar datos reales para la gráfica
+        async function cargarGraficaTendencia() {
+            try {
+                const response = await fetch(`${API_URL}/mercado`);
+                const recursos = await response.json();
+                
+                // Ordenar por rareza para mostrar los 5 más importantes
+                recursos.sort((a, b) => b.rareza - a.rareza);
+                const top5 = recursos.slice(0, 5);
+                
+                const labels = top5.map(r => r.nombre.split(' ')[0]); // Primera palabra
+                const precios = top5.map(r => Math.round(r.precio));
+                const cambios = top5.map(r => r.cambio_porcentaje);
+                
+                // Colores de la interfaz (#517398, #8EB9E8, #0D2C60, #0A1A42)
+                const colores = cambios.map(cambio => {
+                    if (cambio > 10) return '#8EB9E8'; // Azul claro (muy alcista)
+                    if (cambio > 0) return '#517398'; // Azul medio (alcista)
+                    if (cambio > -10) return '#0D2C60'; // Azul oscuro (bajista)
+                    return '#0A1A42'; // Azul muy oscuro (muy bajista)
+                });
+                
+                const ctx = document.getElementById('trendG').getContext('2d');
+                
+                if (trendChart) {
+                    trendChart.destroy();
+                }
+                
+                trendChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Precio Actual',
+                            data: precios,
+                            backgroundColor: colores,
+                            borderColor: '#8EB9E8',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        aspectRatio: 2,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: '#0A1A42',
+                                titleColor: '#8EB9E8',
+                                bodyColor: '#ffffff',
+                                borderColor: '#517398',
+                                borderWidth: 2,
+                                callbacks: {
+                                    label: function(context) {
+                                        const index = context.dataIndex;
+                                        const cambio = cambios[index];
+                                        const signo = cambio >= 0 ? '+' : '';
+                                        return [
+                                            `Precio: $${context.parsed.y.toLocaleString()}`,
+                                            `Cambio: ${signo}${cambio}%`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(142, 185, 232, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#8EB9E8',
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(142, 185, 232, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#8EB9E8'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error al cargar gráfica:', error);
+            }
+        }
+
+        // Cargar al inicio
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarGraficaTendencia();
+            
+            // Actualizar cada 30 segundos
+            setInterval(cargarGraficaTendencia, 30000);
+        });
+            // Cargar al inicio y actualizar cada 10 segundos
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarPanelUsuario();
+            setInterval(actualizarPanelUsuario, 10000);
+        });
+    </script>
+</body>
+</html>
